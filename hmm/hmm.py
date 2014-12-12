@@ -2,7 +2,7 @@
 
 from __future__ import division
 from hmmUtils import normalize
-from math import log
+from math import log, sqrt
 from hmmRandom import randomDist
 
 class HMM(object):
@@ -270,7 +270,7 @@ class HMM(object):
     def logLikelihood(self, observations):
         """Computes the log-likelihood of a sequence of observations for the
         given hmm"""
-        logLikelihood = 0
+        logLikelihood = 0.0
         for o in observations:
             logLikelihood += log(self.sequenceLikelihood(o))
 
@@ -301,6 +301,46 @@ class HMM(object):
             result.append([alpha / sumAlphas for alpha in alphas])
 
         return result
+
+    def rmsq(self, observations):
+        """The root mean squared error for the given set of observations.
+
+        :observations: A list of observation sequences
+        :returns: The root mean squared error.
+
+        """
+        squaredError = 0.0
+        n = 0
+
+        for seq in observations:
+
+            # Filter returns P(state_t | obs_1:t)
+            p_state_given_obs = self.filter(seq)
+
+            for t in xrange(len(seq)):
+
+                if t == 0:
+                    p_prev_states = self.init
+                else:
+                    p_prev_states = p_state_given_obs[t-1]
+
+                # observationProb is P(obs_t | obs_1:t-1)
+                observationProb = 0.0
+                for state in xrange(self.nStates):
+
+                    # state_prob is P(state_t | obs_1:t-1)
+                    state_prob = 0.0
+                    for prev_state in xrange(self.nStates):
+                        state_prob += (self.trans[prev_state][state] *
+                                       p_prev_states[prev_state])
+
+                    observationProb += self.emit[state][seq[t]] * state_prob
+
+                squaredError += (1.0 - observationProb) ** 2
+                n += 1
+
+        return sqrt(squaredError / n)
+
 
     def __str__(self):
         """
