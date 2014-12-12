@@ -278,11 +278,24 @@ class HMMKind(object):
 
                 observation = observationSeq[t]
 
+                if t == 0:
+                    p_prev_states = [[self.pKinds[i] * pinit
+                                      for pinit in self.hmms[i].init]
+                                     for i in xrange(len(self.pKinds))]
+                else:
+                    p_prev_states = filterRes[t-1]
+
                 observationProb = 0.0
                 for k in xrange(len(self.hmms)):
                     hmm = self.hmms[k]
                     for i in xrange(hmm.nStates):
-                        observationProb += (filterRes[t][k][i] *
+
+                        state_prob = 0.0
+                        for prev_state in xrange(hmm.nStates):
+                            state_prob += (hmm.trans[prev_state][i] *
+                                           p_prev_states[k][prev_state])
+
+                        observationProb += (state_prob *
                                             hmm.emit[i][observation])
 
                 squaredError += (1.0 - observationProb) ** 2
